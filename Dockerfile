@@ -2,14 +2,14 @@ FROM docker.io/library/debian:12-slim
 LABEL maintainer="aastefanov@outlook.com"
 
 WORKDIR /
-COPY startup.sh /
-RUN chmod +x /startup.sh
+COPY --chmod=755 startup.sh /
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install phpldapadmin
 
-RUN cp -r /etc/phpldapadmin/templates/ /
-RUN cp /etc/phpldapadmin/config.php /
-RUN cp /etc/phpldapadmin/apache.conf /
+RUN mkdir -p /orig/templates
+RUN cp -a /etc/phpldapadmin/templates/* /orig/templates/
+RUN cp -a /etc/phpldapadmin/config.php /orig/
+RUN cp -a /etc/phpldapadmin/apache.conf /orig/
 
 VOLUME /etc/phpldapadmin
 
