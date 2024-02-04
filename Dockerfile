@@ -1,21 +1,23 @@
-FROM docker.io/library/debian:12-slim
-LABEL maintainer="aastefanov@outlook.com"
+FROM alpine:latest AS builder
 
-WORKDIR /
-COPY --chmod=755 startup.sh /
+RUN apk add --no-cache wget tar
+RUN wget -O /phpldapadmin.tar.gz https://github.com/leenooks/phpLDAPadmin/archive/refs/tags/1.2.6.7.tar.gz
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install phpldapadmin && apt-get clean
+WORKDIR /src
 
-RUN mkdir -p /orig/templates
-RUN cp -a /etc/phpldapadmin/templates/* /orig/templates/
-RUN cp -a /etc/phpldapadmin/config.php /orig/
-RUN cp -a /etc/phpldapadmin/apache.conf /orig/
-
-RUN sed -i "s,/var/www/html,/usr/share/phpldapadmin/htdocs,g" /etc/apache2/sites-enabled/000-default.conf
-
-VOLUME /etc/phpldapadmin
+RUN tar -zxf /phpldapadmin.tar.gz -C /
+RUN mv /phpLDAPadmin-1.2.6.7/* /src/
 
 
-EXPOSE 80
-ENTRYPOINT ["/startup.sh"]
-CMD ["/usr/sbin/apachectl", "-D", "FOREGROUND"]
+FROM php:7-apache AS runner
+
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/install-php-extensions && \
+	install-php-extensions gettext ldap
+
+COPY --from=builder /src /var/www/html
+RUN chown -R 0:33 /var/www/html
+RUN chmod -R u+rw,g+r /var/www/html
+
+VOLUME /var/www/html/config
